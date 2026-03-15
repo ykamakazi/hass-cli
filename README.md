@@ -12,13 +12,21 @@ The primary motivation is **agent use**: with `--json` output, stable exit codes
 
 ## Installation
 
+### Homebrew (recommended)
+
+```bash
+brew tap ykamakazi/tap
+brew install hass-cli
+```
+
+### Build from source
+
 Requires Go 1.21+.
 
 ```bash
-git clone https://github.com/ankur/hass-cli
+git clone https://github.com/ykamakazi/hass-cli
 cd hass-cli
 make
-# binary is ./hass — move it somewhere on your PATH
 mv hass /usr/local/bin/hass
 ```
 
