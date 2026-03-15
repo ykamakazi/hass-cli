@@ -12,10 +12,10 @@ import (
 
 // CLI is the root command struct parsed by Kong.
 type CLI struct {
-	URL   string `name:"url" env:"HASS_URL" help:"Home Assistant URL." short:"u"`
-	Token string `name:"token" env:"HASS_TOKEN" help:"Long-lived access token." short:"t"`
-	JSON  bool   `name:"json" env:"HASS_JSON" help:"Output as JSON."`
-	Plain bool   `name:"plain" env:"HASS_PLAIN" help:"Output as plain text (TSV)."`
+	URL   string `name:"url" help:"Override Home Assistant URL." short:"u"`
+	Token string `name:"token" help:"Override access token." short:"t"`
+	JSON  bool   `name:"json" help:"Output as JSON."`
+	Plain bool   `name:"plain" help:"Output as plain text (TSV)."`
 
 	// Top-level shortcuts
 	On     OnCmd     `cmd:"" help:"Turn on an entity."`
@@ -76,16 +76,16 @@ func Execute() {
 		mode = outfmt.Plain
 	}
 
-	// Load saved config, then let flags/env override.
+	// Load saved config; flags override if explicitly provided.
 	saved, _ := config.Load()
 
-	url := cli.URL
-	if url == "" {
-		url = saved.URL
+	url := saved.URL
+	if cli.URL != "" {
+		url = cli.URL
 	}
-	token := cli.Token
-	if token == "" {
-		token = saved.Token
+	token := saved.Token
+	if cli.Token != "" {
+		token = cli.Token
 	}
 
 	globals := &Globals{
