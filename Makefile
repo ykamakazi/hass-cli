@@ -21,6 +21,6 @@ clean:
 	rm -f $(BINARY)
 
 test:
-	go test ./...
+	GOARCH=$(GOARCH) go test ./...
 
 .DEFAULT_GOAL := build

@@ -41,7 +41,11 @@ func Load() (*Config, error) {
 	if err != nil {
 		return &Config{}, nil
 	}
+	return loadFromPath(path)
+}
 
+// loadFromPath reads config from an explicit file path. Used by Load and tests.
+func loadFromPath(path string) (*Config, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
