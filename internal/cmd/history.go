@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -37,7 +38,7 @@ func (c *HistoryCmd) Run(globals *Globals) error {
 	}
 
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	history, err := client.GetHistory(c.EntityID, startTime, endTime, c.SignificantOnly)
+	history, err := client.GetHistory(context.Background(), c.EntityID, startTime, endTime, c.SignificantOnly)
 	if err != nil {
 		return fmt.Errorf("get history: %w", err)
 	}
@@ -49,7 +50,8 @@ func (c *HistoryCmd) Run(globals *Globals) error {
 		for _, series := range history {
 			for _, s := range series {
 				outfmt.OutputPlain([][2]string{
-					{s.EntityID + "\t" + s.LastChanged, s.State},
+					{s.EntityID, s.LastChanged},
+					{s.LastChanged, s.State},
 				}, os.Stdout)
 			}
 		}

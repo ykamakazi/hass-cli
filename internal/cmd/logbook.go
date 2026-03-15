@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -26,7 +27,7 @@ func (c *LogbookCmd) Run(globals *Globals) error {
 	}
 
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	entries, err := client.GetLogbook(c.EntityID, &startTime)
+	entries, err := client.GetLogbook(context.Background(), c.EntityID, &startTime)
 	if err != nil {
 		return fmt.Errorf("get logbook: %w", err)
 	}
@@ -37,11 +38,12 @@ func (c *LogbookCmd) Run(globals *Globals) error {
 	case outfmt.Plain:
 		fields := make([][2]string, 0, len(entries))
 		for _, e := range entries {
-			msg := e.Message
+			fields = append(fields, [2]string{e.When, e.Name})
 			if e.EntityID != "" {
-				msg = e.EntityID + "\t" + msg
+				fields = append(fields, [2]string{e.EntityID, e.Message})
+			} else {
+				fields = append(fields, [2]string{e.Name, e.Message})
 			}
-			fields = append(fields, [2]string{e.When, msg})
 		}
 		outfmt.OutputPlain(fields, os.Stdout)
 	default:

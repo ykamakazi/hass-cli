@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -31,7 +32,7 @@ func (c *TemplateRenderCmd) Run(globals *Globals) error {
 	}
 
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	result, err := client.RenderTemplate(tmpl)
+	result, err := client.RenderTemplate(context.Background(), tmpl)
 	if err != nil {
 		return fmt.Errorf("render template: %w", err)
 	}

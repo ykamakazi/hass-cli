@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/ankur/hass-cli/internal/outfmt"
@@ -40,7 +41,7 @@ func (e *ExitCodesCmd) Run(globals *Globals) error {
 		outfmt.OutputPlain(fields, os.Stdout)
 	default:
 		for _, ec := range exitCodes {
-			outfmt.Output(outfmt.Human, ec, os.Stdout)
+			fmt.Fprintf(os.Stdout, "%-2d  %-8s  %s\n", ec.Code, ec.Name, ec.Meaning)
 		}
 	}
 	return nil
@@ -55,9 +56,9 @@ func (s *SchemaCmd) Run(globals *Globals) error {
 		"version": Version,
 		"commands": []string{
 			"on", "off", "toggle", "get", "ls",
-			"states", "services", "events",
-			"history", "logbook", "config",
-			"calendars", "template", "agent", "version",
+			"states", "services", "events", "automations",
+			"areas", "entity", "history", "logbook", "config",
+			"calendars", "template", "agent", "setup", "version",
 		},
 		"global_flags": []string{"--url", "--token", "--json", "--plain"},
 	}

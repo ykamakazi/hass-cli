@@ -41,10 +41,7 @@ func (s *SetupCmd) Run(globals *Globals) error {
 	fmt.Print("\nVerifying connection... ")
 	if err := testConnection(url, token); err != nil {
 		fmt.Println("✗")
-		fmt.Fprintln(os.Stderr, "\nError: could not connect to Home Assistant:")
-		fmt.Fprintf(os.Stderr, "  %v\n", err)
-		fmt.Fprintln(os.Stderr, "\nDouble-check your URL and token, then run `hass setup` again.")
-		os.Exit(1)
+		return fmt.Errorf("could not connect to Home Assistant: %w\n\nDouble-check your URL and token, then run `hass setup` again", err)
 	}
 	fmt.Println("✓")
 

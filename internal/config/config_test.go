@@ -11,9 +11,7 @@ func TestSaveAndLoad(t *testing.T) {
 	t.Setenv("HOME", dir) // redirect config dir resolution
 
 	// Override configDir to use temp dir directly.
-	original := os.Getenv("XDG_CONFIG_HOME")
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	defer os.Setenv("XDG_CONFIG_HOME", original)
 
 	cfg := &Config{
 		URL:   "http://homeassistant.local:8123",

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -23,24 +24,7 @@ type StatesListCmd struct {
 }
 
 func (c *StatesListCmd) Run(globals *Globals) error {
-	client := hassapi.NewClient(globals.URL, globals.Token)
-	states, err := client.GetStates()
-	if err != nil {
-		return fmt.Errorf("list states: %w", err)
-	}
-
-	if c.Domain != "" {
-		filtered := states[:0]
-		for _, s := range states {
-			if strings.HasPrefix(s.EntityID, c.Domain+".") {
-				filtered = append(filtered, s)
-			}
-		}
-		states = filtered
-	}
-
-	printStates(globals, states)
-	return nil
+	return listStates(globals, c.Domain)
 }
 
 // StatesGetCmd gets a single entity's state.
@@ -50,7 +34,7 @@ type StatesGetCmd struct {
 
 func (c *StatesGetCmd) Run(globals *Globals) error {
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	state, err := client.GetState(c.EntityID)
+	state, err := client.GetState(context.Background(), c.EntityID)
 	if err != nil {
 		return fmt.Errorf("get state %s: %w", c.EntityID, err)
 	}
@@ -76,7 +60,7 @@ func (c *StatesSetCmd) Run(globals *Globals) error {
 	}
 
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	state, err := client.SetState(c.EntityID, c.State, attrs)
+	state, err := client.SetState(context.Background(), c.EntityID, c.State, attrs)
 	if err != nil {
 		return fmt.Errorf("set state %s: %w", c.EntityID, err)
 	}
@@ -91,7 +75,7 @@ type StatesDeleteCmd struct {
 
 func (c *StatesDeleteCmd) Run(globals *Globals) error {
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	if err := client.DeleteState(c.EntityID); err != nil {
+	if err := client.DeleteState(context.Background(), c.EntityID); err != nil {
 		return fmt.Errorf("delete state %s: %w", c.EntityID, err)
 	}
 	switch globals.Mode {

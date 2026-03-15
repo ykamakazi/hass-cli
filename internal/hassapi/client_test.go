@@ -1,6 +1,7 @@
 package hassapi
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -32,7 +33,7 @@ func TestGetStates(t *testing.T) {
 		json.NewEncoder(w).Encode(want)
 	})
 
-	states, err := client.GetStates()
+	states, err := client.GetStates(context.Background())
 	if err != nil {
 		t.Fatalf("GetStates() error = %v", err)
 	}
@@ -64,7 +65,7 @@ func TestGetState(t *testing.T) {
 		json.NewEncoder(w).Encode(want)
 	})
 
-	state, err := client.GetState("light.bedroom")
+	state, err := client.GetState(context.Background(), "light.bedroom")
 	if err != nil {
 		t.Fatalf("GetState() error = %v", err)
 	}
@@ -81,7 +82,7 @@ func TestGetState_NotFound(t *testing.T) {
 		http.Error(w, `{"message":"Entity not found"}`, http.StatusNotFound)
 	})
 
-	_, err := client.GetState("light.nonexistent")
+	_, err := client.GetState(context.Background(), "light.nonexistent")
 	if err == nil {
 		t.Fatal("GetState() expected error for 404, got nil")
 	}
@@ -103,7 +104,7 @@ func TestCallService(t *testing.T) {
 		json.NewEncoder(w).Encode(returned)
 	})
 
-	states, err := client.CallService("light", "turn_on", map[string]any{"entity_id": "light.bedroom"})
+	states, err := client.CallService(context.Background(), "light", "turn_on", map[string]any{"entity_id": "light.bedroom"})
 	if err != nil {
 		t.Fatalf("CallService() error = %v", err)
 	}
@@ -134,7 +135,7 @@ func TestSetState(t *testing.T) {
 		json.NewEncoder(w).Encode(want)
 	})
 
-	state, err := client.SetState("sensor.test", "42", nil)
+	state, err := client.SetState(context.Background(), "sensor.test", "42", nil)
 	if err != nil {
 		t.Fatalf("SetState() error = %v", err)
 	}
@@ -151,7 +152,7 @@ func TestDeleteState(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	if err := client.DeleteState("sensor.stale"); err != nil {
+	if err := client.DeleteState(context.Background(), "sensor.stale"); err != nil {
 		t.Fatalf("DeleteState() error = %v", err)
 	}
 }
@@ -169,7 +170,7 @@ func TestRenderTemplate(t *testing.T) {
 		w.Write([]byte("on"))
 	})
 
-	result, err := client.RenderTemplate(`{{ states("light.living_room") }}`)
+	result, err := client.RenderTemplate(context.Background(), `{{ states("light.living_room") }}`)
 	if err != nil {
 		t.Fatalf("RenderTemplate() error = %v", err)
 	}
@@ -192,7 +193,7 @@ func TestGetEvents(t *testing.T) {
 		json.NewEncoder(w).Encode(want)
 	})
 
-	events, err := client.GetEvents()
+	events, err := client.GetEvents(context.Background())
 	if err != nil {
 		t.Fatalf("GetEvents() error = %v", err)
 	}
@@ -222,7 +223,7 @@ func TestGetAPIStatus(t *testing.T) {
 				}
 			})
 
-			err := client.GetAPIStatus()
+			err := client.GetAPIStatus(context.Background())
 			if (err != nil) != tc.wantErr {
 				t.Errorf("GetAPIStatus() error = %v, wantErr = %v", err, tc.wantErr)
 			}

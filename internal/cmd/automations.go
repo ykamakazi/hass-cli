@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -22,16 +23,8 @@ type AutomationsCmd struct {
 	Delete  AutomationsDeleteCmd  `cmd:"" help:"Delete an automation."`
 }
 
-// automationID resolves an automation entity_id to its numeric config ID
-// by reading the "id" attribute from the entity state.
-func automationID(client *hassapi.Client, entityID string) (string, error) {
-	if !strings.HasPrefix(entityID, "automation.") {
-		entityID = "automation." + entityID
-	}
-	state, err := client.GetState(entityID)
-	if err != nil {
-		return "", fmt.Errorf("get state for %s: %w", entityID, err)
-	}
+// automationIDFromState extracts the numeric config ID from a state's attributes.
+func automationIDFromState(entityID string, state *hassapi.State) (string, error) {
 	id, ok := state.Attributes["id"]
 	if !ok {
 		return "", fmt.Errorf("automation %s has no id attribute (may be defined in YAML, not UI)", entityID)
@@ -46,12 +39,25 @@ func automationID(client *hassapi.Client, entityID string) (string, error) {
 	}
 }
 
+// automationID resolves an automation entity_id to its numeric config ID
+// by reading the "id" attribute from the entity state.
+func automationID(client *hassapi.Client, entityID string) (string, error) {
+	if !strings.HasPrefix(entityID, "automation.") {
+		entityID = "automation." + entityID
+	}
+	state, err := client.GetState(context.Background(), entityID)
+	if err != nil {
+		return "", fmt.Errorf("get state for %s: %w", entityID, err)
+	}
+	return automationIDFromState(entityID, state)
+}
+
 // AutomationsListCmd lists all automations.
 type AutomationsListCmd struct{}
 
 func (c *AutomationsListCmd) Run(globals *Globals) error {
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	states, err := client.GetStates()
+	states, err := client.GetStates(context.Background())
 	if err != nil {
 		return err
 	}
@@ -96,19 +102,20 @@ func (c *AutomationsGetCmd) Run(globals *Globals) error {
 	}
 	client := hassapi.NewClient(globals.URL, globals.Token)
 
-	state, err := client.GetState(c.EntityID)
+	// Fetch state once and extract the ID from it directly — no second round-trip.
+	state, err := client.GetState(context.Background(), c.EntityID)
 	if err != nil {
 		return err
 	}
 
-	id, err := automationID(client, c.EntityID)
+	id, err := automationIDFromState(c.EntityID, state)
 	if err != nil {
 		// Still show state even if config not available
 		printState(globals, state)
 		return nil
 	}
 
-	cfg, err := client.GetAutomationConfig(id)
+	cfg, err := client.GetAutomationConfig(context.Background(), id)
 	if err != nil {
 		printState(globals, state)
 		return nil
@@ -154,7 +161,7 @@ func (c *AutomationsConfigCmd) Run(globals *Globals) error {
 		return err
 	}
 
-	cfg, err := client.GetAutomationConfig(id)
+	cfg, err := client.GetAutomationConfig(context.Background(), id)
 	if err != nil {
 		return err
 	}
@@ -208,7 +215,7 @@ func (c *AutomationsUpdateCmd) Run(globals *Globals) error {
 	// Ensure the id field matches.
 	cfg["id"] = id
 
-	result, err := client.UpdateAutomation(id, cfg)
+	result, err := client.UpdateAutomation(context.Background(), id, cfg)
 	if err != nil {
 		return fmt.Errorf("update automation: %w", err)
 	}
@@ -239,7 +246,7 @@ func (c *AutomationsTriggerCmd) Run(globals *Globals) error {
 		"entity_id":      c.EntityID,
 		"skip_condition": c.SkipCondition,
 	}
-	_, err := client.CallService("automation", "trigger", data)
+	_, err := client.CallService(context.Background(), "automation", "trigger", data)
 	if err != nil {
 		return fmt.Errorf("trigger %s: %w", c.EntityID, err)
 	}
@@ -264,11 +271,18 @@ func (c *AutomationsEnableCmd) Run(globals *Globals) error {
 		c.EntityID = "automation." + c.EntityID
 	}
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	_, err := client.CallService("automation", "turn_on", map[string]any{"entity_id": c.EntityID})
+	_, err := client.CallService(context.Background(), "automation", "turn_on", map[string]any{"entity_id": c.EntityID})
 	if err != nil {
 		return fmt.Errorf("enable %s: %w", c.EntityID, err)
 	}
-	fmt.Fprintf(os.Stdout, "Enabled: %s\n", c.EntityID)
+	switch globals.Mode {
+	case outfmt.JSON:
+		outfmt.OutputJSON(map[string]string{"enabled": c.EntityID}, os.Stdout)
+	case outfmt.Plain:
+		outfmt.OutputPlain([][2]string{{"enabled", c.EntityID}}, os.Stdout)
+	default:
+		fmt.Fprintf(os.Stdout, "Enabled: %s\n", c.EntityID)
+	}
 	return nil
 }
 
@@ -282,11 +296,18 @@ func (c *AutomationsDisableCmd) Run(globals *Globals) error {
 		c.EntityID = "automation." + c.EntityID
 	}
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	_, err := client.CallService("automation", "turn_off", map[string]any{"entity_id": c.EntityID})
+	_, err := client.CallService(context.Background(), "automation", "turn_off", map[string]any{"entity_id": c.EntityID})
 	if err != nil {
 		return fmt.Errorf("disable %s: %w", c.EntityID, err)
 	}
-	fmt.Fprintf(os.Stdout, "Disabled: %s\n", c.EntityID)
+	switch globals.Mode {
+	case outfmt.JSON:
+		outfmt.OutputJSON(map[string]string{"disabled": c.EntityID}, os.Stdout)
+	case outfmt.Plain:
+		outfmt.OutputPlain([][2]string{{"disabled", c.EntityID}}, os.Stdout)
+	default:
+		fmt.Fprintf(os.Stdout, "Disabled: %s\n", c.EntityID)
+	}
 	return nil
 }
 
@@ -306,7 +327,7 @@ func (c *AutomationsDeleteCmd) Run(globals *Globals) error {
 		return err
 	}
 
-	if err := client.DeleteAutomation(id); err != nil {
+	if err := client.DeleteAutomation(context.Background(), id); err != nil {
 		return fmt.Errorf("delete automation: %w", err)
 	}
 

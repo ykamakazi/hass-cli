@@ -2,6 +2,7 @@ package hassapi
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -86,27 +87,27 @@ type ComponentList []string
 
 // Client is an HTTP client for the Home Assistant REST API.
 type Client struct {
-	BaseURL    string
-	Token      string
-	HTTPClient *http.Client
+	baseURL    string
+	token      string
+	httpClient *http.Client
 }
 
 // NewClient creates a new HA API client.
 func NewClient(baseURL, token string) *Client {
 	return &Client{
-		BaseURL: baseURL,
-		Token:   token,
-		HTTPClient: &http.Client{
+		baseURL: baseURL,
+		token:   token,
+		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
 	}
 }
 
 func (c *Client) buildURL(path string) string {
-	return c.BaseURL + "/api" + path
+	return c.baseURL + "/api" + path
 }
 
-func (c *Client) newRequest(method, path string, body any) (*http.Request, error) {
+func (c *Client) newRequest(ctx context.Context, method, path string, body any) (*http.Request, error) {
 	var bodyReader io.Reader
 	if body != nil {
 		data, err := json.Marshal(body)
@@ -116,31 +117,31 @@ func (c *Client) newRequest(method, path string, body any) (*http.Request, error
 		bodyReader = bytes.NewReader(data)
 	}
 
-	req, err := http.NewRequest(method, c.buildURL(path), bodyReader)
+	req, err := http.NewRequestWithContext(ctx, method, c.buildURL(path), bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.Token)
+	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
 
 	return req, nil
 }
 
 func (c *Client) do(req *http.Request) (*http.Response, error) {
-	resp, err := c.HTTPClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("execute request: %w", err)
 	}
 	return resp, nil
 }
 
-func (c *Client) doJSON(method, path string, body any, out any) error {
-	req, err := c.newRequest(method, path, body)
+func (c *Client) doJSON(ctx context.Context, method, path string, body any, out any) error {
+	req, err := c.newRequest(ctx, method, path, body)
 	if err != nil {
 		return err
 	}
+	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.do(req)
 	if err != nil {
@@ -166,8 +167,8 @@ func (c *Client) doJSON(method, path string, body any, out any) error {
 	return nil
 }
 
-func (c *Client) doText(method, path string, body any) (string, error) {
-	req, err := c.newRequest(method, path, body)
+func (c *Client) doText(ctx context.Context, method, path string, body any) (string, error) {
+	req, err := c.newRequest(ctx, method, path, body)
 	if err != nil {
 		return "", err
 	}
@@ -191,46 +192,8 @@ func (c *Client) doText(method, path string, body any) (string, error) {
 	return string(respBody), nil
 }
 
-// GetAPIStatus checks if the API is running.
-func (c *Client) GetAPIStatus() error {
-	var result map[string]any
-	return c.doJSON("GET", "/", nil, &result)
-}
-
-// GetStates returns all entity states.
-func (c *Client) GetStates() ([]State, error) {
-	var states []State
-	if err := c.doJSON("GET", "/states", nil, &states); err != nil {
-		return nil, err
-	}
-	return states, nil
-}
-
-// GetState returns the state of a specific entity.
-func (c *Client) GetState(entityID string) (*State, error) {
-	var state State
-	if err := c.doJSON("GET", "/states/"+entityID, nil, &state); err != nil {
-		return nil, err
-	}
-	return &state, nil
-}
-
-// SetState creates or updates the state of an entity.
-func (c *Client) SetState(entityID, state string, attributes map[string]any) (*State, error) {
-	payload := map[string]any{
-		"state":      state,
-		"attributes": attributes,
-	}
-	var result State
-	if err := c.doJSON("POST", "/states/"+entityID, payload, &result); err != nil {
-		return nil, err
-	}
-	return &result, nil
-}
-
-// DeleteState deletes an entity's state.
-func (c *Client) DeleteState(entityID string) error {
-	req, err := c.newRequest("DELETE", "/states/"+entityID, nil)
+func (c *Client) doDelete(ctx context.Context, path string) error {
+	req, err := c.newRequest(ctx, "DELETE", path, nil)
 	if err != nil {
 		return err
 	}
@@ -246,42 +209,84 @@ func (c *Client) DeleteState(entityID string) error {
 	return nil
 }
 
+// GetAPIStatus checks if the API is running.
+func (c *Client) GetAPIStatus(ctx context.Context) error {
+	var result map[string]any
+	return c.doJSON(ctx, "GET", "/", nil, &result)
+}
+
+// GetStates returns all entity states.
+func (c *Client) GetStates(ctx context.Context) ([]State, error) {
+	var states []State
+	if err := c.doJSON(ctx, "GET", "/states", nil, &states); err != nil {
+		return nil, err
+	}
+	return states, nil
+}
+
+// GetState returns the state of a specific entity.
+func (c *Client) GetState(ctx context.Context, entityID string) (*State, error) {
+	var state State
+	if err := c.doJSON(ctx, "GET", "/states/"+url.PathEscape(entityID), nil, &state); err != nil {
+		return nil, err
+	}
+	return &state, nil
+}
+
+// SetState creates or updates the state of an entity.
+func (c *Client) SetState(ctx context.Context, entityID, state string, attributes map[string]any) (*State, error) {
+	payload := map[string]any{
+		"state":      state,
+		"attributes": attributes,
+	}
+	var result State
+	if err := c.doJSON(ctx, "POST", "/states/"+url.PathEscape(entityID), payload, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// DeleteState deletes an entity's state.
+func (c *Client) DeleteState(ctx context.Context, entityID string) error {
+	return c.doDelete(ctx, "/states/"+url.PathEscape(entityID))
+}
+
 // GetServices returns all service domains.
-func (c *Client) GetServices() ([]ServiceDomain, error) {
+func (c *Client) GetServices(ctx context.Context) ([]ServiceDomain, error) {
 	var domains []ServiceDomain
-	if err := c.doJSON("GET", "/services", nil, &domains); err != nil {
+	if err := c.doJSON(ctx, "GET", "/services", nil, &domains); err != nil {
 		return nil, err
 	}
 	return domains, nil
 }
 
 // CallService calls a Home Assistant service.
-func (c *Client) CallService(domain, service string, data map[string]any) ([]State, error) {
+func (c *Client) CallService(ctx context.Context, domain, service string, data map[string]any) ([]State, error) {
 	var states []State
-	if err := c.doJSON("POST", "/services/"+domain+"/"+service, data, &states); err != nil {
+	if err := c.doJSON(ctx, "POST", "/services/"+url.PathEscape(domain)+"/"+url.PathEscape(service), data, &states); err != nil {
 		return nil, err
 	}
 	return states, nil
 }
 
 // GetEvents returns all registered events.
-func (c *Client) GetEvents() ([]Event, error) {
+func (c *Client) GetEvents(ctx context.Context) ([]Event, error) {
 	var events []Event
-	if err := c.doJSON("GET", "/events", nil, &events); err != nil {
+	if err := c.doJSON(ctx, "GET", "/events", nil, &events); err != nil {
 		return nil, err
 	}
 	return events, nil
 }
 
 // FireEvent fires a Home Assistant event.
-func (c *Client) FireEvent(eventType string, data map[string]any) error {
+func (c *Client) FireEvent(ctx context.Context, eventType string, data map[string]any) error {
 	var result map[string]any
-	return c.doJSON("POST", "/events/"+eventType, data, &result)
+	return c.doJSON(ctx, "POST", "/events/"+url.PathEscape(eventType), data, &result)
 }
 
 // GetHistory returns the history of entity states.
-func (c *Client) GetHistory(entityID string, startTime time.Time, endTime *time.Time, significantChangesOnly bool) ([][]State, error) {
-	path := "/history/period/" + startTime.Format(time.RFC3339)
+func (c *Client) GetHistory(ctx context.Context, entityID string, startTime time.Time, endTime *time.Time, significantChangesOnly bool) ([][]State, error) {
+	path := "/history/period/" + url.PathEscape(startTime.Format(time.RFC3339))
 
 	params := url.Values{}
 	if entityID != "" {
@@ -299,17 +304,17 @@ func (c *Client) GetHistory(entityID string, startTime time.Time, endTime *time.
 	}
 
 	var history [][]State
-	if err := c.doJSON("GET", path, nil, &history); err != nil {
+	if err := c.doJSON(ctx, "GET", path, nil, &history); err != nil {
 		return nil, err
 	}
 	return history, nil
 }
 
 // GetLogbook returns logbook entries.
-func (c *Client) GetLogbook(entityID string, startTime *time.Time) ([]LogEntry, error) {
+func (c *Client) GetLogbook(ctx context.Context, entityID string, startTime *time.Time) ([]LogEntry, error) {
 	path := "/logbook"
 	if startTime != nil {
-		path += "/" + startTime.Format(time.RFC3339)
+		path += "/" + url.PathEscape(startTime.Format(time.RFC3339))
 	}
 
 	params := url.Values{}
@@ -321,106 +326,93 @@ func (c *Client) GetLogbook(entityID string, startTime *time.Time) ([]LogEntry, 
 	}
 
 	var entries []LogEntry
-	if err := c.doJSON("GET", path, nil, &entries); err != nil {
+	if err := c.doJSON(ctx, "GET", path, nil, &entries); err != nil {
 		return nil, err
 	}
 	return entries, nil
 }
 
 // GetConfig returns the HA configuration.
-func (c *Client) GetConfig() (map[string]any, error) {
+func (c *Client) GetConfig(ctx context.Context) (map[string]any, error) {
 	var cfg map[string]any
-	if err := c.doJSON("GET", "/config", nil, &cfg); err != nil {
+	if err := c.doJSON(ctx, "GET", "/config", nil, &cfg); err != nil {
 		return nil, err
 	}
 	return cfg, nil
 }
 
 // CheckConfig validates the HA configuration.
-func (c *Client) CheckConfig() (map[string]any, error) {
+func (c *Client) CheckConfig(ctx context.Context) (map[string]any, error) {
 	var result map[string]any
-	if err := c.doJSON("POST", "/config/core/check_config", nil, &result); err != nil {
+	if err := c.doJSON(ctx, "POST", "/config/core/check_config", nil, &result); err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
 // GetComponents returns a list of loaded components.
-func (c *Client) GetComponents() ([]string, error) {
+func (c *Client) GetComponents(ctx context.Context) ([]string, error) {
 	var components []string
-	if err := c.doJSON("GET", "/components", nil, &components); err != nil {
+	if err := c.doJSON(ctx, "GET", "/components", nil, &components); err != nil {
 		return nil, err
 	}
 	return components, nil
 }
 
 // GetCalendars returns all calendar entities.
-func (c *Client) GetCalendars() ([]Calendar, error) {
+func (c *Client) GetCalendars(ctx context.Context) ([]Calendar, error) {
 	var calendars []Calendar
-	if err := c.doJSON("GET", "/calendars", nil, &calendars); err != nil {
+	if err := c.doJSON(ctx, "GET", "/calendars", nil, &calendars); err != nil {
 		return nil, err
 	}
 	return calendars, nil
 }
 
 // GetCalendarEvents returns events for a specific calendar.
-func (c *Client) GetCalendarEvents(calendarID, start, end string) ([]CalendarEvent, error) {
+func (c *Client) GetCalendarEvents(ctx context.Context, calendarID, start, end string) ([]CalendarEvent, error) {
 	params := url.Values{}
 	params.Set("start", start)
 	params.Set("end", end)
 
-	path := "/calendars/" + calendarID + "?" + params.Encode()
+	path := "/calendars/" + url.PathEscape(calendarID) + "?" + params.Encode()
 
 	var events []CalendarEvent
-	if err := c.doJSON("GET", path, nil, &events); err != nil {
+	if err := c.doJSON(ctx, "GET", path, nil, &events); err != nil {
 		return nil, err
 	}
 	return events, nil
 }
 
 // RenderTemplate renders a Home Assistant template.
-func (c *Client) RenderTemplate(tmpl string) (string, error) {
+func (c *Client) RenderTemplate(ctx context.Context, tmpl string) (string, error) {
 	payload := map[string]string{"template": tmpl}
-	return c.doText("POST", "/template", payload)
+	return c.doText(ctx, "POST", "/template", payload)
 }
 
 // GetErrorLog returns the HA error log.
-func (c *Client) GetErrorLog() (string, error) {
-	return c.doText("GET", "/error_log", nil)
+func (c *Client) GetErrorLog(ctx context.Context) (string, error) {
+	return c.doText(ctx, "GET", "/error_log", nil)
 }
 
 // GetAutomationConfig returns the full stored config for an automation by its numeric ID.
-func (c *Client) GetAutomationConfig(id string) (map[string]any, error) {
+func (c *Client) GetAutomationConfig(ctx context.Context, id string) (map[string]any, error) {
 	var result map[string]any
-	if err := c.doJSON("GET", "/config/automation/config/"+id, nil, &result); err != nil {
+	if err := c.doJSON(ctx, "GET", "/config/automation/config/"+url.PathEscape(id), nil, &result); err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
 // UpdateAutomation creates or replaces an automation config by its numeric ID.
-func (c *Client) UpdateAutomation(id string, cfg map[string]any) (map[string]any, error) {
+func (c *Client) UpdateAutomation(ctx context.Context, id string, cfg map[string]any) (map[string]any, error) {
 	var result map[string]any
-	if err := c.doJSON("POST", "/config/automation/config/"+id, cfg, &result); err != nil {
+	if err := c.doJSON(ctx, "POST", "/config/automation/config/"+url.PathEscape(id), cfg, &result); err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
 // DeleteAutomation deletes an automation by its numeric ID.
-func (c *Client) DeleteAutomation(id string) error {
-	req, err := c.newRequest("DELETE", "/config/automation/config/"+id, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := c.do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
-	}
-	return nil
+func (c *Client) DeleteAutomation(ctx context.Context, id string) error {
+	return c.doDelete(ctx, "/config/automation/config/"+url.PathEscape(id))
 }

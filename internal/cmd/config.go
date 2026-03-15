@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
@@ -22,7 +23,7 @@ type ConfigGetCmd struct{}
 
 func (c *ConfigGetCmd) Run(globals *Globals) error {
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	cfg, err := client.GetConfig()
+	cfg, err := client.GetConfig(context.Background())
 	if err != nil {
 		return fmt.Errorf("get config: %w", err)
 	}
@@ -59,7 +60,7 @@ type ConfigCheckCmd struct{}
 
 func (c *ConfigCheckCmd) Run(globals *Globals) error {
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	result, err := client.CheckConfig()
+	result, err := client.CheckConfig(context.Background())
 	if err != nil {
 		return fmt.Errorf("check config: %w", err)
 	}
@@ -94,7 +95,7 @@ type ConfigComponentsCmd struct{}
 
 func (c *ConfigComponentsCmd) Run(globals *Globals) error {
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	components, err := client.GetComponents()
+	components, err := client.GetComponents(context.Background())
 	if err != nil {
 		return fmt.Errorf("get components: %w", err)
 	}
@@ -123,7 +124,7 @@ type ConfigErrorLogCmd struct{}
 
 func (c *ConfigErrorLogCmd) Run(globals *Globals) error {
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	log, err := client.GetErrorLog()
+	log, err := client.GetErrorLog(context.Background())
 	if err != nil {
 		return fmt.Errorf("get error log: %w", err)
 	}

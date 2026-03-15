@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -23,7 +24,7 @@ type ServicesListCmd struct {
 
 func (c *ServicesListCmd) Run(globals *Globals) error {
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	domains, err := client.GetServices()
+	domains, err := client.GetServices(context.Background())
 	if err != nil {
 		return fmt.Errorf("list services: %w", err)
 	}
@@ -95,7 +96,7 @@ func (c *ServicesCallCmd) Run(globals *Globals) error {
 	}
 
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	states, err := client.CallService(c.Domain, c.Service, data)
+	states, err := client.CallService(context.Background(), c.Domain, c.Service, data)
 	if err != nil {
 		return fmt.Errorf("call service %s.%s: %w", c.Domain, c.Service, err)
 	}

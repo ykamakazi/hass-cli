@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -19,7 +20,7 @@ type CalendarsListCmd struct{}
 
 func (c *CalendarsListCmd) Run(globals *Globals) error {
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	calendars, err := client.GetCalendars()
+	calendars, err := client.GetCalendars(context.Background())
 	if err != nil {
 		return fmt.Errorf("list calendars: %w", err)
 	}
@@ -52,7 +53,7 @@ type CalendarsEventsCmd struct {
 
 func (c *CalendarsEventsCmd) Run(globals *Globals) error {
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	events, err := client.GetCalendarEvents(c.CalendarID, c.Start, c.End)
+	events, err := client.GetCalendarEvents(context.Background(), c.CalendarID, c.Start, c.End)
 	if err != nil {
 		return fmt.Errorf("get calendar events for %s: %w", c.CalendarID, err)
 	}

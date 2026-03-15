@@ -29,6 +29,8 @@ type CLI struct {
 	Services    ServicesCmd    `cmd:"" help:"List and call services."`
 	Events      EventsCmd      `cmd:"" help:"List and fire events."`
 	Automations AutomationsCmd `cmd:"" help:"View and manage automations."`
+	Areas       AreasCmd       `cmd:"" help:"Manage areas."`
+	Entity      EntityCmd      `cmd:"" help:"Entity registry: rename, set area."`
 	History     HistoryCmd     `cmd:"" help:"View state history."`
 	Logbook     LogbookCmd     `cmd:"" help:"View logbook entries."`
 	Config      ConfigCmd      `cmd:"" help:"Home Assistant configuration."`

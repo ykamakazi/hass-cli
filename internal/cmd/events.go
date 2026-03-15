@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -20,7 +21,7 @@ type EventsListCmd struct{}
 
 func (c *EventsListCmd) Run(globals *Globals) error {
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	events, err := client.GetEvents()
+	events, err := client.GetEvents(context.Background())
 	if err != nil {
 		return fmt.Errorf("list events: %w", err)
 	}
@@ -59,7 +60,7 @@ func (c *EventsFireCmd) Run(globals *Globals) error {
 	}
 
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	if err := client.FireEvent(c.EventType, data); err != nil {
+	if err := client.FireEvent(context.Background(), c.EventType, data); err != nil {
 		return fmt.Errorf("fire event %s: %w", c.EventType, err)
 	}
 

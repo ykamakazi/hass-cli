@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -17,7 +18,7 @@ type OnCmd struct {
 func (c *OnCmd) Run(globals *Globals) error {
 	client := hassapi.NewClient(globals.URL, globals.Token)
 	data := map[string]any{"entity_id": c.EntityID}
-	states, err := client.CallService("homeassistant", "turn_on", data)
+	states, err := client.CallService(context.Background(), "homeassistant", "turn_on", data)
 	if err != nil {
 		return fmt.Errorf("turn on %s: %w", c.EntityID, err)
 	}
@@ -33,7 +34,7 @@ type OffCmd struct {
 func (c *OffCmd) Run(globals *Globals) error {
 	client := hassapi.NewClient(globals.URL, globals.Token)
 	data := map[string]any{"entity_id": c.EntityID}
-	states, err := client.CallService("homeassistant", "turn_off", data)
+	states, err := client.CallService(context.Background(), "homeassistant", "turn_off", data)
 	if err != nil {
 		return fmt.Errorf("turn off %s: %w", c.EntityID, err)
 	}
@@ -49,7 +50,7 @@ type ToggleCmd struct {
 func (c *ToggleCmd) Run(globals *Globals) error {
 	client := hassapi.NewClient(globals.URL, globals.Token)
 	data := map[string]any{"entity_id": c.EntityID}
-	states, err := client.CallService("homeassistant", "toggle", data)
+	states, err := client.CallService(context.Background(), "homeassistant", "toggle", data)
 	if err != nil {
 		return fmt.Errorf("toggle %s: %w", c.EntityID, err)
 	}
@@ -64,7 +65,7 @@ type GetCmd struct {
 
 func (c *GetCmd) Run(globals *Globals) error {
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	state, err := client.GetState(c.EntityID)
+	state, err := client.GetState(context.Background(), c.EntityID)
 	if err != nil {
 		return fmt.Errorf("get state for %s: %w", c.EntityID, err)
 	}
@@ -78,16 +79,22 @@ type LsCmd struct {
 }
 
 func (c *LsCmd) Run(globals *Globals) error {
+	return listStates(globals, c.Domain)
+}
+
+// listStates fetches and prints all entity states, optionally filtered by domain.
+// Shared by LsCmd and StatesListCmd.
+func listStates(globals *Globals, domain string) error {
 	client := hassapi.NewClient(globals.URL, globals.Token)
-	states, err := client.GetStates()
+	states, err := client.GetStates(context.Background())
 	if err != nil {
 		return fmt.Errorf("list states: %w", err)
 	}
 
-	if c.Domain != "" {
+	if domain != "" {
 		filtered := states[:0]
 		for _, s := range states {
-			if strings.HasPrefix(s.EntityID, c.Domain+".") {
+			if strings.HasPrefix(s.EntityID, domain+".") {
 				filtered = append(filtered, s)
 			}
 		}
