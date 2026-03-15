@@ -8,7 +8,7 @@ before:
 
 builds:
   - id: hass
-    main: ./cmd/hass
+    main: ./cmd/hass/main.go
     binary: hass
     env:
       - CGO_ENABLED=0
@@ -36,7 +36,7 @@ archives:
 checksum:
   name_template: "checksums.txt"
 
-brews:
+homebrew_casks:
   - name: hass-cli
     repository:
       owner: ykamakazi
