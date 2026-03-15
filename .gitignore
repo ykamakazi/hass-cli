@@ -1,0 +1,4 @@
+hass
+*.exe
+*.test
+*.out
