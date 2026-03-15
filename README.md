@@ -30,16 +30,9 @@ Run the setup wizard — it auto-discovers Home Assistant on your network, opens
 hass setup
 ```
 
-Config is saved to `~/.config/hass-cli/.env` and loaded automatically. You never need to set environment variables manually.
+Config is saved to `~/Library/Application Support/hass-cli/.env` (macOS) or `~/.config/hass-cli/.env` (Linux) and loaded automatically on every command.
 
-If you prefer to configure manually, set these env vars (or pass as flags):
-
-```bash
-export HASS_URL=http://homeassistant.local:8123
-export HASS_TOKEN=your_token_here
-```
-
-Env vars and `--url`/`--token` flags always take precedence over the saved config.
+To update your settings later, just run `hass setup` again.
 
 ## Usage
 
@@ -132,10 +125,6 @@ Every command supports three output modes:
 hass ls --domain light           # human-readable (default)
 hass ls --domain light --json    # JSON (for scripts and agents)
 hass ls --domain light --plain   # TSV (for grep/awk pipelines)
-
-# Environment variable equivalents
-HASS_JSON=1 hass ls
-HASS_PLAIN=1 hass ls
 ```
 
 ---
@@ -149,7 +138,7 @@ Add these lines to your project's `CLAUDE.md` or to `~/.claude/CLAUDE.md` so Cla
 ```markdown
 ## Smart Home
 The user has Home Assistant running locally. Use `hass` CLI to interact with it.
-Environment variables HASS_URL and HASS_TOKEN are set in the shell.
+Config is stored in ~/Library/Application Support/hass-cli/.env and loaded automatically.
 
 Key commands:
 - `hass ls --domain light --json` — list all lights and their states
@@ -215,10 +204,10 @@ hass template render '{{ states.sensor | selectattr("attributes.device_class", "
 hass <command> [flags]
 
 Flags:
-  -u, --url=STRING      Home Assistant URL ($HASS_URL)
-  -t, --token=STRING    Long-lived access token ($HASS_TOKEN)
-      --json            Output as JSON ($HASS_JSON)
-      --plain           Output as plain text / TSV ($HASS_PLAIN)
+  -u, --url=STRING      Override Home Assistant URL (saved by `hass setup`)
+  -t, --token=STRING    Override access token (saved by `hass setup`)
+      --json            Output as JSON
+      --plain           Output as plain text / TSV
 
 Commands:
   on <entity>                        Turn on an entity
