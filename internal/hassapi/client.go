@@ -388,3 +388,39 @@ func (c *Client) RenderTemplate(tmpl string) (string, error) {
 func (c *Client) GetErrorLog() (string, error) {
 	return c.doText("GET", "/error_log", nil)
 }
+
+// GetAutomationConfig returns the full stored config for an automation by its numeric ID.
+func (c *Client) GetAutomationConfig(id string) (map[string]any, error) {
+	var result map[string]any
+	if err := c.doJSON("GET", "/config/automation/config/"+id, nil, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// UpdateAutomation creates or replaces an automation config by its numeric ID.
+func (c *Client) UpdateAutomation(id string, cfg map[string]any) (map[string]any, error) {
+	var result map[string]any
+	if err := c.doJSON("POST", "/config/automation/config/"+id, cfg, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// DeleteAutomation deletes an automation by its numeric ID.
+func (c *Client) DeleteAutomation(id string) error {
+	req, err := c.newRequest("DELETE", "/config/automation/config/"+id, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := c.do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
+	}
+	return nil
+}

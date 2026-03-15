@@ -25,17 +25,18 @@ type CLI struct {
 	Ls     LsCmd     `cmd:"" help:"List entity states." aliases:"list"`
 
 	// Subcommand groups
-	States    StatesCmd    `cmd:"" help:"Manage entity states."`
-	Services  ServicesCmd  `cmd:"" help:"List and call services."`
-	Events    EventsCmd    `cmd:"" help:"List and fire events."`
-	History   HistoryCmd   `cmd:"" help:"View state history."`
-	Logbook   LogbookCmd   `cmd:"" help:"View logbook entries."`
-	Config    ConfigCmd    `cmd:"" help:"Home Assistant configuration."`
-	Calendars CalendarsCmd `cmd:"" help:"Calendar entities."`
-	Template  TemplateCmd  `cmd:"" help:"Render templates."`
-	Agent     AgentCmd     `cmd:"" help:"Agent utilities."`
-	Setup     SetupCmd     `cmd:"" help:"Configure hass-cli interactively."`
-	Version   VersionCmd   `cmd:"" help:"Show version information."`
+	States      StatesCmd      `cmd:"" help:"Manage entity states."`
+	Services    ServicesCmd    `cmd:"" help:"List and call services."`
+	Events      EventsCmd      `cmd:"" help:"List and fire events."`
+	Automations AutomationsCmd `cmd:"" help:"View and manage automations."`
+	History     HistoryCmd     `cmd:"" help:"View state history."`
+	Logbook     LogbookCmd     `cmd:"" help:"View logbook entries."`
+	Config      ConfigCmd      `cmd:"" help:"Home Assistant configuration."`
+	Calendars   CalendarsCmd   `cmd:"" help:"Calendar entities."`
+	Template    TemplateCmd    `cmd:"" help:"Render templates."`
+	Agent       AgentCmd       `cmd:"" help:"Agent utilities."`
+	Setup       SetupCmd       `cmd:"" help:"Configure hass-cli interactively."`
+	Version     VersionCmd     `cmd:"" help:"Show version information."`
 }
 
 // Globals holds resolved global options passed to each command's Run method.
