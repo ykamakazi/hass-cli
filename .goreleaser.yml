@@ -1,0 +1,66 @@
+version: 2
+
+project_name: hass
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: hass
+    main: ./cmd/hass
+    binary: hass
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X github.com/ankur/hass-cli/internal/cmd.Version={{.Version}}
+
+archives:
+  - id: hass
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: "checksums.txt"
+
+brews:
+  - name: hass-cli
+    repository:
+      owner: ykamakazi
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: https://github.com/ykamakazi/hass-cli
+    description: "CLI for Home Assistant — query and control your smart home from the terminal or AI agents."
+    license: MIT
+    test: |
+      system "#{bin}/hass", "version"
+    install: |
+      bin.install "hass"
+
+release:
+  github:
+    owner: ykamakazi
+    name: hass-cli
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - Merge pull request
