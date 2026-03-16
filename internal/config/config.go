@@ -87,7 +87,9 @@ func Save(cfg *Config) error {
 	}
 
 	path := filepath.Join(dir, ".env")
-	content := fmt.Sprintf("HASS_URL=%s\nHASS_TOKEN=%s\n", cfg.URL, cfg.Token)
+	safeURL := strings.ReplaceAll(cfg.URL, "\n", "")
+	safeToken := strings.ReplaceAll(cfg.Token, "\n", "")
+	content := fmt.Sprintf("HASS_URL=%s\nHASS_TOKEN=%s\n", safeURL, safeToken)
 	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
 		return fmt.Errorf("write config: %w", err)
 	}

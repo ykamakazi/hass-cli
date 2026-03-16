@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -129,6 +130,13 @@ func (c *AutomationsGetCmd) Run(globals *Globals) error {
 	switch globals.Mode {
 	case outfmt.JSON:
 		outfmt.OutputJSON(result, os.Stdout)
+	case outfmt.Plain:
+		outfmt.OutputPlain([][2]string{
+			{"entity_id", state.EntityID},
+			{"state", state.State},
+			{"friendly_name", fmt.Sprintf("%v", state.Attributes["friendly_name"])},
+			{"last_triggered", fmt.Sprintf("%v", state.Attributes["last_triggered"])},
+		}, os.Stdout)
 	default:
 		fmt.Fprintf(os.Stdout, "Entity:        %s\n", state.EntityID)
 		fmt.Fprintf(os.Stdout, "State:         %s\n", state.State)
@@ -190,7 +198,7 @@ func (c *AutomationsUpdateCmd) Run(globals *Globals) error {
 	var err error
 	if c.File != "" {
 		if c.File == "-" {
-			raw, err = os.ReadFile("/dev/stdin")
+			raw, err = io.ReadAll(os.Stdin)
 		} else {
 			raw, err = os.ReadFile(c.File)
 		}

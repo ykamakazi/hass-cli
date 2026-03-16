@@ -71,6 +71,8 @@ func (c *AreasCreateCmd) Run(globals *Globals) error {
 	switch globals.Mode {
 	case outfmt.JSON:
 		outfmt.OutputJSON(area, os.Stdout)
+	case outfmt.Plain:
+		outfmt.OutputPlain([][2]string{{"area_id", area.AreaID}, {"name", area.Name}}, os.Stdout)
 	default:
 		fmt.Fprintf(os.Stdout, "Created area: %s (id: %s)\n", area.Name, area.AreaID)
 	}
@@ -103,6 +105,8 @@ func (c *AreasRenameCmd) Run(globals *Globals) error {
 	switch globals.Mode {
 	case outfmt.JSON:
 		outfmt.OutputJSON(area, os.Stdout)
+	case outfmt.Plain:
+		outfmt.OutputPlain([][2]string{{"area_id", area.AreaID}, {"name", area.Name}}, os.Stdout)
 	default:
 		fmt.Fprintf(os.Stdout, "Renamed area %s → %s\n", areaID, area.Name)
 	}
@@ -133,6 +137,8 @@ func (c *AreasDeleteCmd) Run(globals *Globals) error {
 	switch globals.Mode {
 	case outfmt.JSON:
 		outfmt.OutputJSON(map[string]string{"deleted": areaID}, os.Stdout)
+	case outfmt.Plain:
+		outfmt.OutputPlain([][2]string{{"deleted", areaID}}, os.Stdout)
 	default:
 		fmt.Fprintf(os.Stdout, "Deleted area: %s\n", areaID)
 	}

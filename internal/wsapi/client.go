@@ -227,13 +227,13 @@ func (c *Client) GetStates(ctx context.Context) (json.RawMessage, error) {
 	return result.Result, nil
 }
 
-// Close signals the readLoop to stop and waits for it to exit.
+// Close signals the readLoop to stop, waits for it to exit, then closes the connection.
 func (c *Client) Close() error {
 	var closeErr error
 	c.once.Do(func() {
 		close(c.done)
-		closeErr = c.conn.Close()
 		c.wg.Wait()
+		closeErr = c.conn.Close()
 	})
 	return closeErr
 }

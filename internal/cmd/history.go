@@ -50,8 +50,9 @@ func (c *HistoryCmd) Run(globals *Globals) error {
 		for _, series := range history {
 			for _, s := range series {
 				outfmt.OutputPlain([][2]string{
-					{s.EntityID, s.LastChanged},
-					{s.LastChanged, s.State},
+					{"entity_id", s.EntityID},
+					{"when", s.LastChanged},
+					{"state", s.State},
 				}, os.Stdout)
 			}
 		}

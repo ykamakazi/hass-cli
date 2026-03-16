@@ -41,6 +41,8 @@ func (c *EntitySetAreaCmd) Run(globals *Globals) error {
 	switch globals.Mode {
 	case outfmt.JSON:
 		outfmt.OutputJSON(entry, os.Stdout)
+	case outfmt.Plain:
+		outfmt.OutputPlain([][2]string{{"entity_id", c.EntityID}, {"area_id", areaID}}, os.Stdout)
 	default:
 		fmt.Fprintf(os.Stdout, "Set area for %s → %s\n", c.EntityID, areaID)
 	}
@@ -68,6 +70,8 @@ func (c *EntityRenameCmd) Run(globals *Globals) error {
 	switch globals.Mode {
 	case outfmt.JSON:
 		outfmt.OutputJSON(entry, os.Stdout)
+	case outfmt.Plain:
+		outfmt.OutputPlain([][2]string{{"entity_id", c.EntityID}, {"name", c.Name}}, os.Stdout)
 	default:
 		fmt.Fprintf(os.Stdout, "Renamed %s → %q\n", c.EntityID, c.Name)
 	}
@@ -94,6 +98,14 @@ func (c *EntityInfoCmd) Run(globals *Globals) error {
 	switch globals.Mode {
 	case outfmt.JSON:
 		outfmt.OutputJSON(entry, os.Stdout)
+	case outfmt.Plain:
+		outfmt.OutputPlain([][2]string{
+			{"entity_id", entry.EntityID},
+			{"name", entry.Name},
+			{"area_id", entry.AreaID},
+			{"device_id", entry.DeviceID},
+			{"platform", entry.Platform},
+		}, os.Stdout)
 	default:
 		fmt.Fprintf(os.Stdout, "entity_id:  %s\n", entry.EntityID)
 		fmt.Fprintf(os.Stdout, "name:       %s\n", entry.Name)
