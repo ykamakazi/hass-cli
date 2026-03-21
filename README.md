@@ -12,7 +12,15 @@ The primary motivation is **agent use**: with `--json` output, stable exit codes
 
 ## Installation
 
-### Homebrew (recommended)
+### One-liner (macOS and Linux)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ykamakazi/hass-cli/main/install.sh | bash
+```
+
+On macOS this uses Homebrew. On Linux it builds from source (installs Go via snap if needed).
+
+### Homebrew (macOS)
 
 ```bash
 brew tap ykamakazi/tap
