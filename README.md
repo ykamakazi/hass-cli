@@ -214,6 +214,26 @@ hass template render '{{ states.sensor | selectattr("attributes.device_class", "
 
 ---
 
+## Create automations
+
+Create a new UI-managed automation from a Home Assistant JSON configuration:
+
+```bash
+hass automations create evening_lights --file automation.json
+hass automations create evening_lights --file - < automation.json
+hass automations create example --data '{"alias":"Example","triggers":[],"actions":[]}' --json
+```
+
+The first argument is a new configuration ID, using letters, digits, underscores,
+or hyphens. It is not an `automation.*` entity ID. Omit `id` in the JSON or set it
+to the same value. Home Assistant validates the configuration and assigns the
+entity ID; use `hass automations list` to find it after creation.
+
+Use exactly one of `--data` or `--file`. Creation checks for an existing config ID
+and refuses to replace it; use `automations update <entity-id>` for edits. The
+Home Assistant API does not offer an atomic create-only operation, so avoid
+concurrent creation with the same config ID. JSON output is `{"created":"<config-id>"}`.
+
 ## All commands
 
 ```
@@ -239,6 +259,16 @@ Commands:
 
   services list [--domain]           List available services
   services call <domain> <service>   Call a service
+
+  automations list                   List automations
+  automations create <config-id> --file <path> | --data <json>
+  automations get <entity-id>         Show state and config
+  automations config <entity-id>      Export JSON configuration
+  automations update <entity-id> --file <path> | --data <json>
+  automations trigger <entity-id>     Run automation actions
+  automations enable <entity-id>      Enable automation
+  automations disable <entity-id>     Disable automation
+  automations delete <entity-id>      Delete automation
 
   events list                        List all events
   events fire <type> [--data]        Fire an event

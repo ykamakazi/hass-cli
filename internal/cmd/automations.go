@@ -3,9 +3,12 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/ankur/hass-cli/internal/hassapi"
@@ -15,6 +18,7 @@ import (
 // AutomationsCmd groups automation subcommands.
 type AutomationsCmd struct {
 	List    AutomationsListCmd    `cmd:"" help:"List all automations."`
+	Create  AutomationsCreateCmd  `cmd:"" help:"Create a new automation from JSON."`
 	Get     AutomationsGetCmd     `cmd:"" help:"Get automation state and config."`
 	Config  AutomationsConfigCmd  `cmd:"" help:"Show raw automation config JSON."`
 	Update  AutomationsUpdateCmd  `cmd:"" help:"Update an automation config."`
@@ -22,6 +26,66 @@ type AutomationsCmd struct {
 	Enable  AutomationsEnableCmd  `cmd:"" help:"Enable an automation."`
 	Disable AutomationsDisableCmd `cmd:"" help:"Disable an automation."`
 	Delete  AutomationsDeleteCmd  `cmd:"" help:"Delete an automation."`
+}
+
+// AutomationsCreateCmd creates a stored automation without needing an entity first.
+type AutomationsCreateCmd struct {
+	ID   string `arg:"" name:"config-id" help:"New unique config ID (letters, digits, underscores or hyphens; not an entity ID)."`
+	Data string `name:"data" short:"d" help:"JSON config string."`
+	File string `name:"file" short:"f" help:"Path to JSON config file (use - for stdin)."`
+}
+
+func (c *AutomationsCreateCmd) Run(globals *Globals) error {
+	if !regexp.MustCompile(`^[A-Za-z0-9_-]+$`).MatchString(c.ID) {
+		return fmt.Errorf("config ID must contain only letters, digits, underscores or hyphens; do not use an automation. entity ID")
+	}
+	if (c.Data == "") == (c.File == "") {
+		return fmt.Errorf("provide exactly one of --data <json> or --file <path>")
+	}
+	raw := []byte(c.Data)
+	if c.File != "" {
+		var err error
+		if c.File == "-" {
+			raw, err = io.ReadAll(os.Stdin)
+		} else {
+			raw, err = os.ReadFile(c.File)
+		}
+		if err != nil {
+			return fmt.Errorf("read file: %w", err)
+		}
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return fmt.Errorf("parse JSON: %w", err)
+	}
+	if cfg == nil {
+		return fmt.Errorf("automation config must be a JSON object")
+	}
+	if id, ok := cfg["id"]; ok && id != c.ID {
+		return fmt.Errorf("config id must match %q (or omit it)", c.ID)
+	}
+	cfg["id"] = c.ID
+	client := hassapi.NewClient(globals.URL, globals.Token)
+	_, err := client.GetAutomationConfig(context.Background(), c.ID)
+	if err == nil {
+		return fmt.Errorf("automation config %q already exists; use automations update to modify it", c.ID)
+	}
+	var apiErr *hassapi.APIError
+	if !errors.As(err, &apiErr) || apiErr.StatusCode != http.StatusNotFound {
+		return fmt.Errorf("check automation config: %w", err)
+	}
+	if _, err := client.UpdateAutomation(context.Background(), c.ID, cfg); err != nil {
+		return fmt.Errorf("create automation: %w", err)
+	}
+	switch globals.Mode {
+	case outfmt.JSON:
+		outfmt.OutputJSON(map[string]string{"created": c.ID}, os.Stdout)
+	case outfmt.Plain:
+		outfmt.OutputPlain([][2]string{{"created", c.ID}}, os.Stdout)
+	default:
+		fmt.Fprintf(os.Stdout, "Created automation config: %s\n", c.ID)
+	}
+	return nil
 }
 
 // automationIDFromState extracts the numeric config ID from a state's attributes.
@@ -241,8 +305,8 @@ func (c *AutomationsUpdateCmd) Run(globals *Globals) error {
 
 // AutomationsTriggerCmd triggers an automation.
 type AutomationsTriggerCmd struct {
-	EntityID     string `arg:"" help:"Automation entity ID."`
-	SkipCondition bool  `name:"skip-condition" help:"Skip conditions when triggering." default:"true"`
+	EntityID      string `arg:"" help:"Automation entity ID."`
+	SkipCondition bool   `name:"skip-condition" help:"Skip conditions when triggering." default:"true"`
 }
 
 func (c *AutomationsTriggerCmd) Run(globals *Globals) error {

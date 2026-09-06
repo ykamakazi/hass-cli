@@ -11,14 +11,24 @@ import (
 	"time"
 )
 
+// APIError is an unsuccessful Home Assistant HTTP response.
+type APIError struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("API error %d: %s", e.StatusCode, e.Body)
+}
+
 // State represents a Home Assistant entity state.
 type State struct {
-	EntityID   string         `json:"entity_id"`
-	State      string         `json:"state"`
-	Attributes map[string]any `json:"attributes"`
-	LastChanged string        `json:"last_changed"`
-	LastUpdated string        `json:"last_updated"`
-	Context    struct {
+	EntityID    string         `json:"entity_id"`
+	State       string         `json:"state"`
+	Attributes  map[string]any `json:"attributes"`
+	LastChanged string         `json:"last_changed"`
+	LastUpdated string         `json:"last_updated"`
+	Context     struct {
 		ID       string `json:"id"`
 		ParentID string `json:"parent_id"`
 		UserID   string `json:"user_id"`
@@ -155,7 +165,7 @@ func (c *Client) doJSON(ctx context.Context, method, path string, body any, out 
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("API error %d: %s", resp.StatusCode, string(respBody))
+		return &APIError{StatusCode: resp.StatusCode, Body: string(respBody)}
 	}
 
 	if out != nil && len(respBody) > 0 {
