@@ -227,13 +227,16 @@ func (c *Client) GetStates(ctx context.Context) (json.RawMessage, error) {
 	return result.Result, nil
 }
 
-// Close signals the readLoop to stop, waits for it to exit, then closes the connection.
+// Close shuts down the client. The connection is closed before waiting for
+// readLoop to exit: readLoop parks in a blocking conn.ReadJSON, which only
+// returns once the underlying socket is torn down. Waiting first would
+// deadlock against a live connection.
 func (c *Client) Close() error {
 	var closeErr error
 	c.once.Do(func() {
 		close(c.done)
-		c.wg.Wait()
 		closeErr = c.conn.Close()
+		c.wg.Wait()
 	})
 	return closeErr
 }

@@ -23,6 +23,19 @@ type EntityRegistryEntry struct {
 	DeviceID string `json:"device_id"`
 	Platform string `json:"platform"`
 	Icon     string `json:"icon"`
+	// DisabledBy and HiddenBy are null when the entity is enabled/visible,
+	// otherwise they name who disabled or hid it ("user", "integration", ...).
+	DisabledBy string `json:"disabled_by"`
+	HiddenBy   string `json:"hidden_by"`
+}
+
+// EntityUpdateResult is the outcome of an entity registry update. Re-enabling
+// an entity needs its config entry reloaded; Home Assistant reports whether it
+// can do that on a delay or needs a full restart.
+type EntityUpdateResult struct {
+	Entry          *EntityRegistryEntry
+	RequireRestart bool
+	ReloadDelay    int
 }
 
 // Device is a device registry record.
@@ -127,6 +140,54 @@ func (c *Client) RenameEntity(ctx context.Context, entityID, name string) (*Enti
 		return nil, err
 	}
 	return unmarshalEntityResult(raw)
+}
+
+// DeleteEntity removes an entity from the entity registry.
+//
+// Registry removal is not the same as removing the underlying device: an
+// integration that still discovers the entity re-creates it, usually within
+// seconds. Use SetEntityDisabled for a change that survives rediscovery.
+func (c *Client) DeleteEntity(ctx context.Context, entityID string) error {
+	_, err := c.command(ctx, "config/entity_registry/remove", map[string]any{"entity_id": entityID})
+	return err
+}
+
+// SetEntityDisabled disables or re-enables an entity. Disabling is the durable
+// way to silence an entity that an integration keeps rediscovering.
+func (c *Client) SetEntityDisabled(ctx context.Context, entityID string, disabled bool) (*EntityUpdateResult, error) {
+	// disabled_by must be null (not "") to re-enable, so it is typed as any.
+	var disabledBy any
+	if disabled {
+		disabledBy = "user"
+	}
+	raw, err := c.command(ctx, "config/entity_registry/update", map[string]any{
+		"entity_id":   entityID,
+		"disabled_by": disabledBy,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var wrapper struct {
+		Entry          *EntityRegistryEntry `json:"entity_entry"`
+		RequireRestart bool                 `json:"require_restart"`
+		ReloadDelay    int                  `json:"reload_delay"`
+	}
+	if err := json.Unmarshal(raw, &wrapper); err != nil {
+		return nil, err
+	}
+	if wrapper.Entry == nil {
+		entry, err := unmarshalEntityResult(raw)
+		if err != nil {
+			return nil, err
+		}
+		wrapper.Entry = entry
+	}
+	return &EntityUpdateResult{
+		Entry:          wrapper.Entry,
+		RequireRestart: wrapper.RequireRestart,
+		ReloadDelay:    wrapper.ReloadDelay,
+	}, nil
 }
 
 func unmarshalEntityResult(raw json.RawMessage) (*EntityRegistryEntry, error) {

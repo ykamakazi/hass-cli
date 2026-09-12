@@ -106,6 +106,37 @@ hass logbook
 hass logbook --entity lock.front_door
 ```
 
+### Entity registry
+
+```bash
+# Inspect an entity's registry record (area, device, platform, disabled/hidden)
+hass entity info media_player.living_room
+
+# Organise
+hass entity rename sensor.xyz "Patio Temperature"
+hass entity set-area media_player.living_room "living room"
+
+# Disable an entity — the durable way to silence one you don't want.
+# The integration stops providing it, and it stays gone across restarts
+# and rediscovery.
+hass entity disable media_player.living_room
+hass entity enable media_player.living_room
+
+# Remove the registry entry outright. Note that an integration which still
+# discovers the entity will simply re-create it — prefer `disable` for
+# duplicates from auto-discovering integrations like Google Cast.
+hass entity delete media_player.stale_entity
+```
+
+Disabling is usually what you want for duplicate entities. A device that is
+reachable by two integrations (a TV on both Google Cast and webOS, say) shows up
+twice; deleting the unwanted copy only makes it reappear, while disabling it
+sticks.
+
+Re-enabling needs the owning config entry reloaded. `hass entity enable` reports
+whether Home Assistant will reload it shortly on its own, or whether a full
+restart is required.
+
 ### Config & Diagnostics
 
 ```bash
@@ -256,6 +287,18 @@ Commands:
   states get <entity>                Get a single entity state
   states set <entity> <state>        Create or update entity state
   states delete <entity>             Delete an entity
+
+  areas list                         List all areas
+  areas create <name>                Create a new area
+  areas rename <area> <name>         Rename an area
+  areas delete <area>                Delete an area
+
+  entity info <entity>               Show entity registry entry
+  entity rename <entity> <name>      Set the friendly name
+  entity set-area <entity> <area>    Assign an entity to an area
+  entity disable <entity>            Disable an entity
+  entity enable <entity>             Re-enable a disabled entity
+  entity delete <entity>             Remove from the entity registry
 
   services list [--domain]           List available services
   services call <domain> <service>   Call a service
